@@ -101,3 +101,6 @@ $RECYCLE.BIN/
 
 # Visual Studio Code
 .vscode/
+
+# Logs
+**/logs/

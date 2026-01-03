@@ -44,7 +44,7 @@ namespace Foodtrucks.Api.Features.Orders
 
     public record OrderResultDto(int Id, string TrackingCode);
 
-    public class PlaceOrderCommandHandler(AppDbContext db, IPaymentService paymentService, ISmsService smsService, IValidator<PlaceOrderRequest> validator, CancellationToken ct)
+    public class PlaceOrderCommandHandler(AppDbContext db, IPaymentService paymentService, ISmsService smsService, IValidator<PlaceOrderRequest> validator, ILogger<PlaceOrderCommandHandler> logger, CancellationToken ct)
     {
         public async Task<CommandResult<OrderResultDto>> Handle(PlaceOrderRequest request)
         {
@@ -159,6 +159,7 @@ namespace Foodtrucks.Api.Features.Orders
             }
             catch(Exception ex)
             {
+                logger.LogError(ex, "Error placing order");
                 return CommandResult<OrderResultDto>.Failure(ex.Message);
             }
         }
@@ -174,10 +175,11 @@ namespace Foodtrucks.Api.Features.Orders
                 IPaymentService paymentService,
                 ISmsService smsService,
                 IValidator<PlaceOrderRequest> validator,
+                ILogger<PlaceOrderCommandHandler> logger,
                 CancellationToken ct) =>
             {
                
-                var handler = new PlaceOrderCommandHandler(db, paymentService, smsService, validator, ct);
+                var handler = new PlaceOrderCommandHandler(db, paymentService, smsService, validator, logger, ct);
                 var result = await handler.Handle(request);
                 
                 if (result.IsSuccess)

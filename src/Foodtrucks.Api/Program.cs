@@ -2,6 +2,7 @@
 using Foodtrucks.Api.Routing;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
+using Serilog;
 
 namespace Foodtrucks.Api
 {
@@ -10,6 +11,10 @@ namespace Foodtrucks.Api
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            
+            // Add Serilog
+            builder.Host.UseSerilog((ctx, lc) => lc
+                .ReadFrom.Configuration(ctx.Configuration));
 
             // Add services to the container.
 
@@ -41,6 +46,10 @@ namespace Foodtrucks.Api
             builder.Services.AddScoped<Foodtrucks.Api.Services.ISmsService, Foodtrucks.Api.Services.MockSmsService>();
             builder.Services.AddScoped<Foodtrucks.Api.Services.IVendorAuthorizationService, Foodtrucks.Api.Services.VendorAuthorizationService>();
             builder.Services.AddScoped<Foodtrucks.Api.Data.DataSeeder>();
+            
+            builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+            builder.Services.AddProblemDetails();
+            //Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -56,9 +65,16 @@ namespace Foodtrucks.Api
             }
 
             //app.UseHttpsRedirection();
+            
+            app.UseExceptionHandler(); 
+            
+            //app.UseHttpsRedirection();
+            
+            app.UseSerilogRequestLogging();
 
             app.UseCors("AllowAll");
 
+            app.UseAuthentication();
             app.UseAuthorization();
             
             app.MapGroup("/api/auth").MapIdentityApi<Foodtrucks.Api.Features.Auth.User>();
@@ -71,8 +87,10 @@ namespace Foodtrucks.Api
             using (var scope = app.Services.CreateScope())
             {
                 var seeder = scope.ServiceProvider.GetRequiredService<Foodtrucks.Api.Data.DataSeeder>();
+                var db = scope.ServiceProvider.GetRequiredService<Foodtrucks.Api.Data.AppDbContext>();
                 try 
                 {
+                    db.Database.Migrate();
                     seeder.SeedAsync().Wait();
                 }
                 catch (Exception ex)

@@ -41,7 +41,7 @@ namespace Foodtrucks.Api.Features.Menu
         }
     }
 
-    public class AddMenuItemCommandHandler(AppDbContext db, IValidator<AddMenuItemRequest> validator)
+    public class AddMenuItemCommandHandler(AppDbContext db, IValidator<AddMenuItemRequest> validator, ILogger<AddMenuItemCommandHandler> logger)
     {
         public async Task<CommandResult> Handle(int categoryId, AddMenuItemRequest request, CancellationToken ct)
         {
@@ -87,6 +87,7 @@ namespace Foodtrucks.Api.Features.Menu
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error adding menu item");
                 return CommandResult.Failure($"EXCEPTION: {ex.Message} {ex.InnerException?.Message}");
             }
         }
@@ -101,9 +102,10 @@ namespace Foodtrucks.Api.Features.Menu
                 [FromBody] AddMenuItemRequest request,
                 AppDbContext db,
                 IValidator<AddMenuItemRequest> validator,
+                ILogger<AddMenuItemCommandHandler> logger,
                 CancellationToken ct) =>
             {
-                var handler = new AddMenuItemCommandHandler(db, validator);
+                var handler = new AddMenuItemCommandHandler(db, validator, logger);
                 var result = await handler.Handle(categoryId, request, ct);
 
                 if (result.Success)

@@ -28,7 +28,7 @@ namespace Foodtrucks.Api.Features.Menu
         }
     }
 
-    public class EditMenuItemCommandHandler(AppDbContext db, IValidator<EditMenuItemRequest> validator)
+    public class EditMenuItemCommandHandler(AppDbContext db, IValidator<EditMenuItemRequest> validator, ILogger<EditMenuItemCommandHandler> logger)
     {
         public async Task<CommandResult> Handle(int itemId, EditMenuItemRequest request, CancellationToken ct)
         {
@@ -82,6 +82,7 @@ namespace Foodtrucks.Api.Features.Menu
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error editing menu item");
                 return CommandResult.Failure($"EXCEPTION: {ex.Message} {ex.InnerException?.Message}");
             }
         }
@@ -96,9 +97,10 @@ namespace Foodtrucks.Api.Features.Menu
                 [FromBody] EditMenuItemRequest request,
                 AppDbContext db,
                 IValidator<EditMenuItemRequest> validator,
+                ILogger<EditMenuItemCommandHandler> logger,
                 CancellationToken ct) =>
             {
-                var handler = new EditMenuItemCommandHandler(db, validator);
+                var handler = new EditMenuItemCommandHandler(db, validator, logger);
                 var result = await handler.Handle(itemId, request, ct);
 
                 if (result.Success)

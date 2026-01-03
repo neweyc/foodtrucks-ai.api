@@ -15,14 +15,16 @@ namespace Foodtrucks.Api.Data
                  var users = new[]
                 {
                     new User { UserName = "vendor1@foodtrucks.com", Email = "vendor1@foodtrucks.com" },
-                    new User { UserName = "vendor2@foodtrucks.com", Email = "vendor2@foodtrucks.com" }
+                    new User { UserName = "vendor2@foodtrucks.com", Email = "vendor2@foodtrucks.com" },
+                    new User { UserName = "neweycm@gmail.com", Email = "neweycm@gmail.com" }
                 };
 
                 foreach (var user in users)
                 {
                     if (await userManager.FindByEmailAsync(user.Email!) == null)
                     {
-                        await userManager.CreateAsync(user, "Testvendor1!");
+                        var password = user.Email == "neweycm@gmail.com" ? "Admin1!" : "Testvendor1!";
+                        await userManager.CreateAsync(user, password);
                     }
                 }
             }
