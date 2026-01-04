@@ -2,9 +2,13 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Foodtrucks.Api.Features.Auth
 {
-    public class User : IdentityUser
+    public class User
     {
-        // Add custom properties if needed, e.g. VendorId if user is a vendor
+        public int Id { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Role { get; set; } = "Vendor"; // Admin or Vendor
         public int? VendorId { get; set; }
     }
 }

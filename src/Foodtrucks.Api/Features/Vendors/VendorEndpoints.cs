@@ -13,6 +13,7 @@ namespace Foodtrucks.Api.Features.Vendors
         public string Description { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string Website { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
     }
 
     public class UpdateVendorRequest
@@ -33,6 +34,7 @@ namespace Foodtrucks.Api.Features.Vendors
             RuleFor(x => x.Description).MaximumLength(500);
             RuleFor(x => x.PhoneNumber).NotEmpty().Matches(@"^\+?[1-9]\d{1,14}$").WithMessage("Invalid phone number format");
             RuleFor(x => x.Website).Must(uri => string.IsNullOrEmpty(uri) || Uri.TryCreate(uri, UriKind.Absolute, out _)).WithMessage("Invalid URL");
+            RuleFor(x => x.Email).NotEmpty().EmailAddress();
         }
     }
 
@@ -75,7 +77,8 @@ namespace Foodtrucks.Api.Features.Vendors
             group.MapPost("/", async (
                 [FromBody] CreateVendorRequest request,
                 AppDbContext db,
-                IValidator<CreateVendorRequest> validator) =>
+                IValidator<CreateVendorRequest> validator,
+                Foodtrucks.Api.Services.IPasswordHasher passwordHasher) =>
             {
                 var validationResult = await validator.ValidateAsync(request);
                 if (!validationResult.IsValid)
@@ -83,19 +86,48 @@ namespace Foodtrucks.Api.Features.Vendors
                     return Results.ValidationProblem(validationResult.ToDictionary());
                 }
 
-                var vendor = new Vendor
+                // Check if email already exists
+                var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+                if (existingUser != null)
                 {
-                    Name = request.Name,
-                    Description = request.Description,
-                    PhoneNumber = request.PhoneNumber,
-                    Website = request.Website,
-                    IsActive = true
-                };
+                    return Results.Conflict($"User with email {request.Email} already exists.");
+                }
 
-                db.Vendors.Add(vendor);
-                await db.SaveChangesAsync();
+                using var transaction = await db.Database.BeginTransactionAsync();
+                try 
+                {
+                    var vendor = new Vendor
+                    {
+                        Name = request.Name,
+                        Description = request.Description,
+                        PhoneNumber = request.PhoneNumber,
+                        Website = request.Website,
+                        IsActive = true
+                    };
 
-                return Results.Created($"/api/vendors/{vendor.Id}", vendor);
+                    db.Vendors.Add(vendor);
+                    await db.SaveChangesAsync();
+
+                    var user = new Foodtrucks.Api.Features.Auth.User
+                    {
+                        Email = request.Email,
+                        UserName = request.Email,
+                        PasswordHash = passwordHasher.HashPassword("Password123!"),
+                        VendorId = vendor.Id,
+                        Role = "Vendor"
+                    };
+
+                    db.Users.Add(user);
+                    await db.SaveChangesAsync();
+                    
+                    await transaction.CommitAsync();
+                    return Results.Created($"/api/vendors/{vendor.Id}", vendor);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return Results.BadRequest($"Failed to create vendor/user: {ex.Message}");
+                }
             });
 
             // PUT /api/vendors/{id}

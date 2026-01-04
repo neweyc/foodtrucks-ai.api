@@ -3,6 +3,7 @@ using Foodtrucks.Api.Data;
 using Foodtrucks.Api.Features.Menu;
 using Foodtrucks.Api.Features.Trucks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Foodtrucks.Api.Tests.Features.Menu
@@ -11,6 +12,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
     {
         private readonly AppDbContext _db;
         private readonly Mock<IValidator<EditMenuItemRequest>> _validatorMock;
+        private readonly Mock<ILogger<EditMenuItemCommandHandler>> _loggerMock;
 
         public EditMenuTests()
         {
@@ -19,6 +21,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
                 .Options;
             _db = new AppDbContext(options);
             _validatorMock = new Mock<IValidator<EditMenuItemRequest>>();
+            _loggerMock = new Mock<ILogger<EditMenuItemCommandHandler>>();
         }
 
         [Fact]
@@ -46,7 +49,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
             _validatorMock.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
-            var handler = new EditMenuItemCommandHandler(_db, _validatorMock.Object);
+            var handler = new EditMenuItemCommandHandler(_db, _validatorMock.Object, _loggerMock.Object);
 
             // Act
             var result = await handler.Handle(item.Id, request, CancellationToken.None);
@@ -77,7 +80,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
             _validatorMock.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
-            var handler = new EditMenuItemCommandHandler(_db, _validatorMock.Object);
+            var handler = new EditMenuItemCommandHandler(_db, _validatorMock.Object, _loggerMock.Object);
 
             // Act
             var result = await handler.Handle(999, request, CancellationToken.None);

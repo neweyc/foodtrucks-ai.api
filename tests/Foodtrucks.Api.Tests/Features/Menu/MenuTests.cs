@@ -3,6 +3,7 @@ using Foodtrucks.Api.Data;
 using Foodtrucks.Api.Features.Menu;
 using Foodtrucks.Api.Features.Trucks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Foodtrucks.Api.Tests.Features.Menu
@@ -12,6 +13,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
         private readonly AppDbContext _db;
         private readonly Mock<IValidator<AddMenuCategoryRequest>> _categoryValidatorMock;
         private readonly Mock<IValidator<AddMenuItemRequest>> _itemValidatorMock;
+        private readonly Mock<ILogger<AddMenuItemCommandHandler>> _loggerMock;
 
         public MenuTests()
         {
@@ -21,6 +23,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
             _db = new AppDbContext(options);
             _categoryValidatorMock = new Mock<IValidator<AddMenuCategoryRequest>>();
             _itemValidatorMock = new Mock<IValidator<AddMenuItemRequest>>();
+            _loggerMock = new Mock<ILogger<AddMenuItemCommandHandler>>();
         }
 
         [Fact]
@@ -74,7 +77,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
             _itemValidatorMock.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
-            var handler = new AddMenuItemCommandHandler(_db, _itemValidatorMock.Object);
+            var handler = new AddMenuItemCommandHandler(_db, _itemValidatorMock.Object, _loggerMock.Object);
 
             // Act
             var result = await handler.Handle(category.Id, request, CancellationToken.None);
@@ -91,7 +94,7 @@ namespace Foodtrucks.Api.Tests.Features.Menu
             _itemValidatorMock.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
-            var handler = new AddMenuItemCommandHandler(_db, _itemValidatorMock.Object);
+            var handler = new AddMenuItemCommandHandler(_db, _itemValidatorMock.Object, _loggerMock.Object);
 
             // Act
             var result = await handler.Handle(999, request, CancellationToken.None);

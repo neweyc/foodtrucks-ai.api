@@ -6,6 +6,7 @@ using Foodtrucks.Api.Features.Trucks;
 using Foodtrucks.Api.Features.Vendors;
 using Foodtrucks.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Foodtrucks.Api.Tests.Features.Orders
@@ -16,6 +17,7 @@ namespace Foodtrucks.Api.Tests.Features.Orders
         private readonly Mock<IPaymentService> _paymentMock;
         private readonly Mock<ISmsService> _smsMock;
         private readonly Mock<IValidator<PlaceOrderRequest>> _validatorMock;
+        private readonly Mock<ILogger<PlaceOrderCommandHandler>> _loggerMock;
 
         public PlaceOrderTests()
         {
@@ -26,6 +28,7 @@ namespace Foodtrucks.Api.Tests.Features.Orders
             _paymentMock = new Mock<IPaymentService>();
             _smsMock = new Mock<ISmsService>();
             _validatorMock = new Mock<IValidator<PlaceOrderRequest>>();
+            _loggerMock = new Mock<ILogger<PlaceOrderCommandHandler>>();
         }
 
         [Fact]
@@ -64,16 +67,17 @@ namespace Foodtrucks.Api.Tests.Features.Orders
             _paymentMock.Setup(p => p.ProcessPaymentAsync(20, "USD", "tok_123"))
                 .ReturnsAsync(true);
 
-            var handler = new PlaceOrderCommandHandler(_db, _paymentMock.Object, _smsMock.Object, _validatorMock.Object, CancellationToken.None);
+            var handler = new PlaceOrderCommandHandler(_db, _paymentMock.Object, _smsMock.Object, _validatorMock.Object, _loggerMock.Object, CancellationToken.None);
 
             // Act
             var result = await handler.Handle(request);
 
             // Assert
             Assert.True(result.Success);
-            Assert.NotNull(result.Id);
+            Assert.NotNull(result.Data);
+            Assert.True(result.Data.Id > 0);
 
-            var order = await _db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == result.Id);
+            var order = await _db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == result.Data.Id);
             Assert.NotNull(order);
             Assert.Equal(20, order.TotalAmount);
             Assert.Equal(OrderStatus.Paid, order.Status);
@@ -109,7 +113,7 @@ namespace Foodtrucks.Api.Tests.Features.Orders
             _paymentMock.Setup(p => p.ProcessPaymentAsync(It.IsAny<decimal>(), "USD", "tok_fail"))
                 .ReturnsAsync(false);
 
-            var handler = new PlaceOrderCommandHandler(_db, _paymentMock.Object, _smsMock.Object, _validatorMock.Object, CancellationToken.None);
+            var handler = new PlaceOrderCommandHandler(_db, _paymentMock.Object, _smsMock.Object, _validatorMock.Object, _loggerMock.Object, CancellationToken.None);
 
             // Act
             var result = await handler.Handle(request);

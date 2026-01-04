@@ -1,10 +1,11 @@
 using Foodtrucks.Api.Features.Auth;
 using Foodtrucks.Api.Features.Vendors;
-using Microsoft.AspNetCore.Identity;
+using Foodtrucks.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace Foodtrucks.Api.Data
 {
-    public class DataSeeder(AppDbContext db, UserManager<User> userManager)
+    public class DataSeeder(AppDbContext db, IPasswordHasher passwordHasher)
     {
         public async Task SeedAsync()
         {
@@ -14,19 +15,21 @@ namespace Foodtrucks.Api.Data
             {
                  var users = new[]
                 {
-                    new User { UserName = "vendor1@foodtrucks.com", Email = "vendor1@foodtrucks.com" },
-                    new User { UserName = "vendor2@foodtrucks.com", Email = "vendor2@foodtrucks.com" },
-                    new User { UserName = "neweycm@gmail.com", Email = "neweycm@gmail.com" }
+                    new User { UserName = "vendor1@foodtrucks.com", Email = "vendor1@foodtrucks.com", Role = "Vendor" },
+                    new User { UserName = "vendor2@foodtrucks.com", Email = "vendor2@foodtrucks.com" , Role = "Vendor"},
+                    new User { UserName = "neweycm@gmail.com", Email = "neweycm@gmail.com", Role = "Admin" }
                 };
 
                 foreach (var user in users)
                 {
-                    if (await userManager.FindByEmailAsync(user.Email!) == null)
+                    if (!await db.Users.AnyAsync(u => u.Email == user.Email))
                     {
                         var password = user.Email == "neweycm@gmail.com" ? "Admin1!" : "Testvendor1!";
-                        await userManager.CreateAsync(user, password);
+                        user.PasswordHash = passwordHasher.HashPassword(password);
+                        db.Users.Add(user);
                     }
                 }
+                await db.SaveChangesAsync();
             }
            
             // Seed Vendors
@@ -43,22 +46,23 @@ namespace Foodtrucks.Api.Data
             }
 
             // Always attempt to link users to ensure they are connected
-            var allVendors = db.Vendors.ToList();
+            var allVendors = await db.Vendors.ToListAsync();
             if (allVendors.Count >= 2) 
             {
-                var v1User = await userManager.FindByEmailAsync("vendor1@foodtrucks.com");
+                var v1User = await db.Users.FirstOrDefaultAsync(u => u.Email == "vendor1@foodtrucks.com");
                 if (v1User != null && v1User.VendorId == null) 
                 {
                     v1User.VendorId = allVendors[0].Id;
-                    await userManager.UpdateAsync(v1User);
+                    // EF Core tracks changes, SaveChangesAsync at the end or explicitly here
                 }
 
-                var v2User = await userManager.FindByEmailAsync("vendor2@foodtrucks.com");
+                var v2User = await db.Users.FirstOrDefaultAsync(u => u.Email == "vendor2@foodtrucks.com");
                 if (v2User != null && v2User.VendorId == null)
                 {
                     v2User.VendorId = allVendors[1].Id;
-                    await userManager.UpdateAsync(v2User);
                 }
+                
+                await db.SaveChangesAsync();
             }
         }
     }

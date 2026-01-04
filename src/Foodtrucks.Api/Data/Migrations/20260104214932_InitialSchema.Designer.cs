@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Foodtrucks.Api.Migrations
+namespace Foodtrucks.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260101202837_AddOrders")]
-    partial class AddOrders
+    [Migration("20260104214932_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,38 @@ namespace Foodtrucks.Api.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Foodtrucks.Api.Features.Auth.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("VendorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
+                });
 
             modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuCategory", b =>
                 {
@@ -41,6 +73,8 @@ namespace Foodtrucks.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TruckId");
 
                     b.ToTable("MenuCategories");
                 });
@@ -81,6 +115,60 @@ namespace Foodtrucks.Api.Migrations
                     b.ToTable("MenuItems");
                 });
 
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuItemOption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemOption");
+                });
+
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuItemSize", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemSize");
+                });
+
             modelBuilder.Entity("Foodtrucks.Api.Features.Orders.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -105,6 +193,10 @@ namespace Foodtrucks.Api.Migrations
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TrackingCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TruckId")
                         .HasColumnType("int");
@@ -137,6 +229,12 @@ namespace Foodtrucks.Api.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<string>("SelectedOptions")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SelectedSize")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -223,15 +321,42 @@ namespace Foodtrucks.Api.Migrations
                     b.ToTable("Vendors");
                 });
 
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuCategory", b =>
+                {
+                    b.HasOne("Foodtrucks.Api.Features.Trucks.Truck", null)
+                        .WithMany("MenuCategories")
+                        .HasForeignKey("TruckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuItem", b =>
                 {
                     b.HasOne("Foodtrucks.Api.Features.Menu.MenuCategory", "MenuCategory")
-                        .WithMany()
+                        .WithMany("MenuItems")
                         .HasForeignKey("MenuCategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("MenuCategory");
+                });
+
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuItemOption", b =>
+                {
+                    b.HasOne("Foodtrucks.Api.Features.Menu.MenuItem", null)
+                        .WithMany("Options")
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuItemSize", b =>
+                {
+                    b.HasOne("Foodtrucks.Api.Features.Menu.MenuItem", null)
+                        .WithMany("Sizes")
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Foodtrucks.Api.Features.Orders.OrderItem", b =>
@@ -254,9 +379,26 @@ namespace Foodtrucks.Api.Migrations
                     b.Navigation("Vendor");
                 });
 
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuCategory", b =>
+                {
+                    b.Navigation("MenuItems");
+                });
+
+            modelBuilder.Entity("Foodtrucks.Api.Features.Menu.MenuItem", b =>
+                {
+                    b.Navigation("Options");
+
+                    b.Navigation("Sizes");
+                });
+
             modelBuilder.Entity("Foodtrucks.Api.Features.Orders.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Foodtrucks.Api.Features.Trucks.Truck", b =>
+                {
+                    b.Navigation("MenuCategories");
                 });
 #pragma warning restore 612, 618
         }

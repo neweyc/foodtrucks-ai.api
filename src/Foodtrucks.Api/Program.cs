@@ -27,14 +27,39 @@ namespace Foodtrucks.Api
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll",
-                    builder => builder.AllowAnyOrigin()
+                    builder => builder.SetIsOriginAllowed(_ => true) // Allow any origin in dev
                                       .AllowAnyMethod()
-                                      .AllowAnyHeader());
+                                      .AllowAnyHeader()
+                                      .AllowCredentials());
             });
 
-            builder.Services.AddIdentityApiEndpoints<Foodtrucks.Api.Features.Auth.User>()
-                .AddEntityFrameworkStores<Foodtrucks.Api.Data.AppDbContext>();
-
+            // Custom Cookie Authentication
+            builder.Services.AddAuthentication("Cookies")
+                .AddCookie("Cookies", options =>
+                {
+                    options.Cookie.Name = "FoodTrucksAuth";
+                    // In Development (localhost), use Lax + SameAsRequest to avoid HTTPS/SameSite issues
+                    // In Production, use None + Always for cross-origin/SSL
+                    if (builder.Environment.IsDevelopment())
+                    {
+                        options.Cookie.SameSite = SameSiteMode.Lax;
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    }
+                    else
+                    {
+                        options.Cookie.SameSite = SameSiteMode.None;
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    }
+                    
+                    options.Events.OnRedirectToLogin = context =>
+                    {
+                        context.Response.StatusCode = 401;
+                        return Task.CompletedTask;
+                    };
+                });
+            
+            // Explicitly remove Identity services
+            
             builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
             {
                 options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -45,6 +70,7 @@ namespace Foodtrucks.Api
             builder.Services.AddScoped<Foodtrucks.Api.Services.IPaymentService, Foodtrucks.Api.Services.MockPaymentService>();
             builder.Services.AddScoped<Foodtrucks.Api.Services.ISmsService, Foodtrucks.Api.Services.MockSmsService>();
             builder.Services.AddScoped<Foodtrucks.Api.Services.IVendorAuthorizationService, Foodtrucks.Api.Services.VendorAuthorizationService>();
+            builder.Services.AddScoped<Foodtrucks.Api.Services.IPasswordHasher, Foodtrucks.Api.Services.PasswordHasher>();
             builder.Services.AddScoped<Foodtrucks.Api.Data.DataSeeder>();
             
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -70,15 +96,15 @@ namespace Foodtrucks.Api
             
             //app.UseHttpsRedirection();
             
+            //app.UseHttpsRedirection(); // moved up if needed, but currently commented out
+            
+            app.UseCors("AllowAll"); // Moved CORS early
+            
             app.UseSerilogRequestLogging();
-
-            app.UseCors("AllowAll");
 
             app.UseAuthentication();
             app.UseAuthorization();
             
-            app.MapGroup("/api/auth").MapIdentityApi<Foodtrucks.Api.Features.Auth.User>();
-
            
 
             ConfigureEndpoints(app);
@@ -90,6 +116,7 @@ namespace Foodtrucks.Api
                 var db = scope.ServiceProvider.GetRequiredService<Foodtrucks.Api.Data.AppDbContext>();
                 try 
                 {
+                    // db.Database.EnsureCreated();
                     db.Database.Migrate();
                     seeder.SeedAsync().Wait();
                 }

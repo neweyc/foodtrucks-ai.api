@@ -1,6 +1,7 @@
 using System.Security.Claims;
+using Foodtrucks.Api.Data;
 using Foodtrucks.Api.Routing;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Foodtrucks.Api.Features.Auth
 {
@@ -14,9 +15,15 @@ namespace Foodtrucks.Api.Features.Auth
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            app.MapGet("/api/auth/me", async (ClaimsPrincipal user, UserManager<User> userManager) =>
+            app.MapGet("/api/auth/me", async (ClaimsPrincipal user, AppDbContext db) =>
             {
-                var appUser = await userManager.GetUserAsync(user);
+                var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                {
+                    return Results.Unauthorized();
+                }
+
+                var appUser = await db.Users.FindAsync(userId);
                 if (appUser == null) return Results.Unauthorized();
 
                 return Results.Ok(new UserDto
