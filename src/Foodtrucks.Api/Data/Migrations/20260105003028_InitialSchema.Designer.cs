@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Foodtrucks.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260104214932_InitialSchema")]
+    [Migration("20260105003028_InitialSchema")]
     partial class InitialSchema
     {
         /// <inheritdoc />
