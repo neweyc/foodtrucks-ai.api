@@ -83,7 +83,7 @@ namespace Foodtrucks.Api.Features.Trucks
             })
             .WithTags("Trucks")
             .WithOpenApi()
-            .RequireAuthorization();
+            .RequireAuthorization("VendorOnly");
         }
     }
 }

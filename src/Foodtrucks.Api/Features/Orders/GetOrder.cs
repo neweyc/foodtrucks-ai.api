@@ -9,7 +9,9 @@ namespace Foodtrucks.Api.Features.Orders
     public class GetOrderResponse
     {
         public int Id { get; set; }
+        public int TruckId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
+        public string CustomerPhone { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
@@ -34,7 +36,9 @@ namespace Foodtrucks.Api.Features.Orders
                     .Select(o => new GetOrderResponse
                     {
                         Id = o.Id,
+                        TruckId = o.TruckId,
                         CustomerName = o.CustomerName,
+                        CustomerPhone = o.CustomerPhone,
                         TotalAmount = o.TotalAmount,
                         Status = o.Status.ToString(),
                         CreatedAt = o.CreatedAt,

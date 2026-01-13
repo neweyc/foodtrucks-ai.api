@@ -22,7 +22,14 @@ namespace Foodtrucks.Api
             builder.Services.AddDbContext<Foodtrucks.Api.Data.AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddAuthorization();
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("VendorOnly", policy =>
+                    policy.RequireClaim("VendorId"));
+                options.AddPolicy("AdminOnly", policy =>
+                    policy.RequireAssertion(context =>
+                        !context.User.HasClaim(c => c.Type == "VendorId")));
+            });
             
             builder.Services.AddCors(options =>
             {
@@ -68,6 +75,7 @@ namespace Foodtrucks.Api
             builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
             builder.Services.AddScoped<Foodtrucks.Api.Services.IPaymentService, Foodtrucks.Api.Services.MockPaymentService>();
+            builder.Services.AddScoped<Foodtrucks.Api.Services.IStripeService, Foodtrucks.Api.Services.StripeService>();
             builder.Services.AddScoped<Foodtrucks.Api.Services.ISmsService, Foodtrucks.Api.Services.MockSmsService>();
             builder.Services.AddScoped<Foodtrucks.Api.Services.IVendorAuthorizationService, Foodtrucks.Api.Services.VendorAuthorizationService>();
             builder.Services.AddScoped<Foodtrucks.Api.Services.IPasswordHasher, Foodtrucks.Api.Services.PasswordHasher>();
